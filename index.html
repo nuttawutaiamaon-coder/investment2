@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portfolio Tracker</title>
+    <!-- Tailwind CSS สำหรับตกแต่ง UI ให้สวยงามทันสมัย -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Chart.js สำหรับแสดงกราฟสรุป -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-blue-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                📈 Investment Dashboard
+            </h1>
+            <div class="space-x-2">
+                <button onclick="switchTab('sum')" id="btn-sum" class="px-4 py-2 rounded-lg font-medium transition bg-blue-700 shadow">
+                    หน้าหลัก (Sum)
+                </button>
+                <button onclick="switchTab('add')" id="btn-add" class="px-4 py-2 rounded-lg font-medium transition hover:bg-blue-700">
+                    เพิ่มข้อมูล (Add Data)
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- ==================== หน้า SUM (หน้าหลัก) ==================== -->
+        <section id="tab-sum" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-gray-500 text-sm font-medium">มูลค่าการลงทุนรวม</p>
+                    <h3 id="total-investment" class="text-3xl font-bold text-gray-800 mt-2">0.00</h3>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-gray-500 text-sm font-medium">ผลตอบแทนเฉลี่ย (%)</p>
+                    <h3 id="avg-return" class="text-3xl font-bold text-green-600 mt-2">0.00%</h3>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-gray-500 text-sm font-medium">จำนวนรายการลงทุน</p>
+                    <h3 id="total-tx" class="text-3xl font-bold text-blue-600 mt-2">0</h3>
+                </div>
+            </div>
+
+            <!-- ตารางแสดงรายการลงทุน -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-800">ประวัติการลงทุนทั้งหมด</h3>
+                    <button onclick="clearData()" class="text-sm text-red-500 hover:text-red-700 font-medium">ล้างข้อมูลทั้งหมด</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                                <th class="p-4">วันที่</th>
+                                <th class="p-4">อัตราแลกเปลี่ยน</th>
+                                <th class="p-4">จำนวน</th>
+                                <th class="p-4">ราคา</th>
+                                <th class="p-4">มูลค่ารวม</th>
+                                <th class="p-4 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="investment-table-body" class="divide-y divide-gray-100 text-sm text-gray-700">
+                            <!-- ข้อมูลจะถูกแทรกลงที่นี่โดย JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ตารางแสดงผลตอบแทน -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-6">
+                <div class="p-6 border-b border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-800">ประวัติผลตอบแทน (Returns)</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                                <th class="p-4">วันที่บันทึก</th>
+                                <th class="p-4">อัตราผลตอบแทน (%)</th>
+                                <th class="p-4 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="return-table-body" class="divide-y divide-gray-100 text-sm text-gray-700">
+                            <!-- ข้อมูลผลตอบแทนจะถูกแทรกลงที่นี่ -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== หน้า ADD DATA (หน้ารอง) ==================== -->
+        <section id="tab-add" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- ฟอร์มเพิ่มข้อมูลการลงทุน -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-6">➕ เพิ่มข้อมูลการลงทุน</h3>
+                <form id="investment-form" onsubmit="addInvestment(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">วันที่ลงทุน</label>
+                        <input type="date" id="inv-date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">อัตราแลกเปลี่ยน (เช่น 1 ถ้าเป็นบาท)</label>
+                        <input type="number" step="0.0001" id="inv-rate" value="1.00" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">จำนวน (Units/Shares)</label>
+                        <input type="number" step="any" id="inv-amount" placeholder="0.00" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ราคาต่อหน่วย</label>
+                        <input type="number" step="any" id="inv-price" placeholder="0.00" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition shadow-md">
+                        บันทึกข้อมูลการลงทุน
+                    </button>
+                </form>
+            </div>
+
+            <!-- ฟอร์มเพิ่มผลตอบแทน -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-6">📊 เพิ่มอัตราผลตอบแทน</h3>
+                <form id="return-form" onsubmit="addReturn(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">วันที่บันทึกผลตอบแทน</label>
+                        <input type="date" id="ret-date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">อัตราผลตอบแทน (%)</label>
+                        <input type="number" step="0.01" id="ret-rate" placeholder="เช่น 5.5 หรือ -2.3" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition shadow-md">
+                        บันทึกผลตอบแทน
+                    </button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-gray-400 text-sm">
+        Investment Tracker Web App &copy; 2026
+    </footer>
+
+    <!-- JavaScript สำหรับควบคุมการทำงาน -->
+    <script>
+        // โหลดข้อมูลจาก LocalStorage หรือกำหนดค่าว่าง
+        let investments = JSON.parse(localStorage.getItem('investments')) || [];
+        let returns = JSON.parse(localStorage.getItem('returns')) || [];
+
+        // ฟังก์ชันสลับหน้า Tab
+        function switchTab(tab) {
+            const sumSection = document.getElementById('tab-sum');
+            const addSection = document.getElementById('tab-add');
+            const btnSum = document.getElementById('btn-sum');
+            const btnAdd = document.getElementById('btn-add');
+
+            if (tab === 'sum') {
+                sumSection.classList.remove('hidden');
+                addSection.classList.add('hidden');
+                btnSum.className = "px-4 py-2 rounded-lg font-medium transition bg-blue-700 shadow";
+                btnAdd.className = "px-4 py-2 rounded-lg font-medium transition hover:bg-blue-700";
+                renderData();
+            } else {
+                sumSection.classList.add('hidden');
+                addSection.classList.remove('hidden');
+                btnAdd.className = "px-4 py-2 rounded-lg font-medium transition bg-blue-700 shadow";
+                btnSum.className = "px-4 py-2 rounded-lg font-medium transition hover:bg-blue-700";
+            }
+        }
+
+        // เพิ่มข้อมูลการลงทุน
+        function addInvestment(e) {
+            e.preventDefault();
+            const date = document.getElementById('inv-date').value;
+            const exchangeRate = parseFloat(document.getElementById('inv-rate').value);
+            const amount = parseFloat(document.getElementById('inv-amount').value);
+            const price = parseFloat(document.getElementById('inv-price').value);
+
+            const newItem = { id: Date.now(), date, exchangeRate, amount, price };
+            investments.push(newItem);
+            localStorage.setItem('investments', JSON.stringify(investments));
+
+            document.getElementById('investment-form').reset();
+            document.getElementById('inv-rate').value = "1.00";
+            alert('บันทึกข้อมูลการลงทุนสำเร็จ!');
+            switchTab('sum');
+        }
+
+        // เพิ่มอัตราผลตอบแทน
+        function addReturn(e) {
+            e.preventDefault();
+            const date = document.getElementById('ret-date').value;
+            const rate = parseFloat(document.getElementById('ret-rate').value);
+
+            const newReturn = { id: Date.now(), date, rate };
+            returns.push(newReturn);
+            localStorage.setItem('returns', JSON.stringify(returns));
+
+            document.getElementById('return-form').reset();
+            alert('บันทึกอัตราผลตอบแทนสำเร็จ!');
+            switchTab('sum');
+        }
+
+        // ลบข้อมูลการลงทุน
+        function deleteInvestment(id) {
+            investments = investments.filter(item => item.id !== id);
+            localStorage.setItem('investments', JSON.stringify(investments));
+            renderData();
+        }
+
+        // ลบข้อมูลผลตอบแทน
+        function deleteReturn(id) {
+            returns = returns.filter(item => item.id !== id);
+            localStorage.setItem('returns', JSON.stringify(returns));
+            renderData();
+        }
+
+        // ล้างข้อมูลทั้งหมด
+        function clearData() {
+            if (confirm('คุณต้องการล้างข้อมูลทั้งหมดใช่หรือไม่?')) {
+                investments = [];
+                returns = [];
+                localStorage.removeItem('investments');
+                localStorage.removeItem('returns');
+                renderData();
+            }
+        }
+
+        // แสดงผลข้อมูลลงในตารางและอัปเดต Summary Cards
+        function renderData() {
+            const tbodyInv = document.getElementById('investment-table-body');
+            const tbodyRet = document.getElementById('return-table-body');
+            
+            tbodyInv.innerHTML = '';
+            tbodyRet.innerHTML = '';
+
+            let totalVal = 0;
+
+            // วาดตารางการลงทุน
+            if (investments.length === 0) {
+                tbodyInv.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลการลงทุน</td></tr>`;
+            } else {
+                investments.forEach(item => {
+                    const totalItemVal = item.amount * item.price * item.exchangeRate;
+                    totalVal += totalItemVal;
+                    tbodyInv.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-4">${item.date}</td>
+                            <td class="p-4">${item.exchangeRate.toLocaleString()}</td>
+                            <td class="p-4">${item.amount.toLocaleString()}</td>
+                            <td class="p-4">${item.price.toLocaleString()}</td>
+                            <td class="p-4 font-semibold">${totalItemVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td class="p-4 text-center">
+                                <button onclick="deleteInvestment(${item.id})" class="text-red-500 hover:text-red-700 text-xs bg-red-50 px-2 py-1 rounded">ลบ</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // วาดตารางผลตอบแทน
+            if (returns.length === 0) {
+                tbodyRet.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลผลตอบแทน</td></tr>`;
+            } else {
+                returns.forEach(item => {
+                    const colorClass = item.rate >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                    tbodyRet.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-4">${item.date}</td>
+                            <td class="p-4 ${colorClass}">${item.rate > 0 ? '+' : ''}${item.rate}%</td>
+                            <td class="p-4 text-center">
+                                <button onclick="deleteReturn(${item.id})" class="text-red-500 hover:text-red-700 text-xs bg-red-50 px-2 py-1 rounded">ลบ</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // คำนวณผลตอบแทนเฉลี่ย
+            let avgReturnVal = 0;
+            if (returns.length > 0) {
+                const sumRates = returns.reduce((acc, curr) => acc + curr.rate, 0);
+                avgReturnVal = sumRates / returns.length;
+            }
+
+            // อัปเดต Card สรุปผล
+            document.getElementById('total-investment').innerText = totalVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ฿';
+            
+            const avgReturnEl = document.getElementById('avg-return');
+            avgReturnEl.innerText = (avgReturnVal > 0 ? '+' : '') + avgReturnVal.toFixed(2) + '%';
+            avgReturnEl.className = `text-3xl font-bold mt-2 ${avgReturnVal >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+            document.getElementById('total-tx').innerText = investments.length;
+        }
+
+        // โหลดข้อมูลเมื่อเปิดหน้าเว็บครั้งแรก
+        renderData();
+    </script>
+</body>
+</html>
